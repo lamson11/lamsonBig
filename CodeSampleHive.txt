@@ -1,0 +1,71 @@
+
+#Up file lên hdfs
+hdfs dfs -put /home/hadoopquoctuan/Sample_Hive/Bev_BranchA.txt /
+#Tương tự 5 file kia
+
+create database SampleHive;//tạo database
+
+use SampleHive;
+
+//tạo bảng
+create table if not exists BevcountA(beverage string, count int) row format delimited fields terminated by ',';
+
+create table if not exists BevcountB(beverage string, count int) row format delimited fields terminated by ',';
+
+create table if not exists BevcountC(beverage string, count int) row format delimited fields terminated by ',';
+
+
+
+load data inpath'hdfs://quoctuan-master:54310/Bev_ConscountA.txt' into table BevcountA;
+
+load data inpath'hdfs://quoctuan-master:54310/Bev_ConscountB.txt' into table BevcountB;
+
+load data inpath'hdfs://quoctuan-master:54310/Bev_ConscountC.txt' into table BevcountC;
+
+create table if not exists BevbranchA(beverage string, branch string) row format delimited fields terminated by ',';
+
+create table if not exists BevbranchB(beverage string, branch string) row format delimited fields terminated by ',';
+
+create table if not exists BevbranchC(beverage string, branch string) row format delimited fields terminated by ',';
+
+load data inpath'hdfs://quoctuan-master:54310/Bev_BranchA.txt' into table BevbranchA;
+
+load data inpath'hdfs://quoctuan-master:54310/Bev_BranchB.txt' into table BevbranchB;
+
+load data inpath'hdfs://quoctuan-master:54310/Bev_BranchC.txt' into table BevbranchC;
+
+
+Tổng số người tiêu dùng của Chi nhánh 1 là bao nhiêu?
+Step 1:
+
+Hive > create table if not exists BRANCH1Branch as select * from BevbranchA where branch = 'Branch1';
+
+Hive > insert into table BRANCH1Branch select * from BevbranchB where branch = 'Branch1';
+
+Hive > insert into table BRANCH1Branch select * from BevbranchC where branch = 'Branch1';
+Step 2: 
+
+Hive> create table if not exists BRANCH1branchcount(beverage string, count int);
+
+Hive> insert into table BRANCH1branchcount select BevcountA.beverage,sum(BevcountA.count) from BRANCH1Branch join BevcountA on(BRANCH1Branch.beverage = BevcountA.beverage ) group by BevcountA.beverage ; 
+
+Hive> insert into table BRANCH1branchcount select BevcountB.beverage,sum(BevcountB.count) from BRANCH1Branch join BevcountB on(BRANCH1Branch.beverage = BevcountB.beverage ) group by BevcountB.beverage ; 
+
+Hive> insert into table BRANCH1branchcount select BevcountC.beverage,sum(BevcountC.count) from BRANCH1Branch join BevcountC on(BRANCH1Branch.beverage = BevcountC.beverage ) group by BevcountC.beverage ;  
+
+Step 3: 
+
+Hive> select sum(count) from BRANCH1branchcount;
+
+Đồ uống được tiêu thụ của chi nhánh 1,8, 10
+step 1: 
+
+Hive> Create table if not exists BRANCH10BRANCH8BRANCH1beverage1 as select beverage,branch from (
+select * from BevbranchA where branch = 'Branch10' or branch = 'Branch8' or branch = 'Branch1' union all select * from BevbranchB where branch = 'Branch10' or branch = 'Branch8' or branch = 'Branch1' union all select * from BevbranchC where branch = 'Branch10' or branch = 'Branch8' or branch = 'Branch1' )unionResult ;
+
+
+Dự án nhằm mục đích hiển thị Đồ uống cho nhiều Chi nhánh của một Quán cà phê (mối quan hệ nhiều đến nhiều) bằng cách sử dụng Hive. Nói cách khác, mỗi Đồ uống có thể có sẵn trên nhiều
+Các chi nhánh và mỗi Chi nhánh của quán cà phê có thể phân phối nhiều Đồ uống.
+Giả sử mỗi chi nhánh gửi báo cáo bán hàng của họ dưới dạng tệp csv. Dự án nhằm mục đích đưa họ đến
+HDFS và phân tích sâu hơn sẽ được thực hiện bằng Hive cho câu lệnh vấn đề đã cho
+phía dưới.
